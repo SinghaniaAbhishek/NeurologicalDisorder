@@ -1,0 +1,6 @@
+Checking: c:\Users\abhishek\Desktop\eeg_project\files\neuroscan.db
+Tables found: ['users', 'eeg_results', 'diary_entries']
+Table 'users' columns: ['id', 'name', 'email', 'password_hash', 'age', 'condition', 'created_at']
+Table 'eeg_results' columns: ['id', 'user_id', 'prediction', 'confidence', 'band_powers', 'signal_stats', 'notes', 'created_at']
+Table 'diary_entries' columns: ['id', 'user_id', 'disorder', 'entry_type', 'severity', 'duration', 'triggers', 'notes', 'entry_date', 'created_at']
+Done.
