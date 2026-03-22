@@ -1,25 +1,4 @@
-"""
-NeuroScan — EEG Training Pipeline v3
-======================================
-7-CLASS MODEL:
-  0 = Healthy       (real Bonn data — Z + O folders)
-  1 = Interictal    (real Bonn data — N + F folders)
-  2 = Epilepsy      (real Bonn data — S folder)
-  3 = Parkinsons    (synthetic — based on clinical EEG signatures)
-  4 = Alzheimers    (synthetic — based on clinical EEG signatures)
-  5 = ADHD          (synthetic — based on clinical EEG signatures)
-  6 = Autism        (synthetic — based on clinical EEG signatures)
 
-If real datasets for disorders are downloaded later, just add them
-to data/parkinsons/, data/alzheimers/, data/adhd/, data/autism/
-and the script will automatically use them instead of synthetic.
-
-SYNTHETIC DATA BASIS (from published EEG research):
-  Parkinson's  → Slow alpha, increased delta/theta, reduced beta
-  Alzheimer's  → High delta, very low alpha, high theta/alpha ratio
-  ADHD         → Elevated theta, reduced beta, high theta/beta ratio
-  Autism       → Atypical gamma, reduced alpha coherence, high theta
-"""
 
 import os
 import numpy as np
@@ -39,7 +18,7 @@ warnings.filterwarnings('ignore')
 # ──────────────────────────────────────────────
 
 FS = 173.61
-DURATION = 23.6       # seconds per segment
+DURATION =23.6       # seconds per segment
 N_SAMPLES = 4097      # samples per segment
 
 BANDS = {
@@ -295,17 +274,17 @@ def load_bonn(data_dir="data"):
             continue
         files = [f for f in os.listdir(path) if f.lower().endswith(".txt")]
         print(f"  Loading {len(files)} files from {folder}/ → class {label} ({CLASS_NAMES[label]})")
-        loaded = 0
+        num_loaded_list = []
         for fname in files:
             try:
                 raw = np.loadtxt(os.path.join(path, fname))
                 if len(raw) < 100: continue
                 X.append(extract_features(preprocess(raw, FS), FS))
                 y.append(label)
-                loaded += 1
+                num_loaded_list.append(1)
             except Exception as e:
                 print(f"    [SKIP] {fname}: {e}")
-        print(f"    ✓ {loaded} loaded")
+        print(f"    ✓ {len(num_loaded_list)} loaded")
     return np.array(X), np.array(y)
 
 def load_real_disorder(folder_path, label):
