@@ -11,6 +11,14 @@ from scipy import signal
 from scipy.stats import skew, kurtosis
 from typing import List
 
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+
 app = FastAPI(title="EEG Disorder Detection API")
 
 # Allow CORS
@@ -137,6 +145,10 @@ def run_prediction(eeg_array):
 class predict_request(BaseModel):
     eeg: List[float]
 
+class RecommendationRequest(BaseModel):
+    prediction: str
+    confidence: float
+
 @app.get("/health")
 def health():
     return {
@@ -177,6 +189,44 @@ async def predict_file(file: UploadFile = File(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/recommendations")
+def get_recommendations(req: RecommendationRequest):
+    if not GEMINI_API_KEY:
+        return {"use_mock": True, "message": "GEMINI_API_KEY not set in .env"}
+    
+    prompt = f"""You are an expert neurologist. A patient's EEG scan was analyzed using ML.
+The predicted state is: {req.prediction} with a confidence of {req.confidence}%.
+Generate a detailed response in JSON format exactly matching this structure:
+{{
+  "summary": "A 2-3 sentence summary of what this means.",
+  "riskLevel": "critical" | "high" | "moderate" | "low",
+  "dos": [{{"icon": "str", "text": "str"}}],
+  "donts": [{{"icon": "str", "text": "str"}}],
+  "actions": [{{"priority": "critical"|"high"|"medium"|"info", "text": "str"}}],
+  "causes": [{{"icon": "str", "text": "str"}}],
+  "symptoms": [{{"icon": "str", "text": "str"}}],
+  "foodsToEat": [{{"icon": "str", "text": "str"}}],
+  "foodsToAvoid": [{{"icon": "str", "text": "str"}}],
+  "exercises": [{{"icon": "str", "text": "str"}}],
+  "lifestyle": [{{"icon": "str", "text": "str"}}]
+}}
+Ensure all arrays have at least 4 items. The icons should be single emojis.
+Reply ONLY with valid JSON exactly matching the schema. No markdown wrappers.
+"""
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"): text = text[7:]
+        if text.startswith("```"): text = text[3:]
+        if text.endswith("```"): text = text[:-3]
+        import json
+        data = json.loads(text.strip())
+        return {"use_mock": False, "data": data}
+    except Exception as e:
+        print("Gemini API error:", e)
+        return {"use_mock": True, "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
